@@ -38,10 +38,6 @@ wind_speed_df = wind_speed_df.drop(wind_speed_df.index[drop_rows])
 
 
 
-
-
-
-
 def get_monthly_avgs(dataframe, city):
 	jan_sum = 0
 	jan_count = 0
@@ -132,6 +128,7 @@ def get_monthly_avgs(dataframe, city):
 			octo_sum / octo_count,
 			nov_sum / nov_count,
 			dec_sum / dec_count]
+
 #END FUNCTION
 
 
