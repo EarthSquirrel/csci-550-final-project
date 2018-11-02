@@ -60,7 +60,7 @@ def mean_shift(data, column):
 
 
 data = pd.read_csv('data/monthly_avgs.csv')
-temp_data = data[['Temperature']]
+temp_data = data[['Temperature'].iloc[1:30]]
 
 mean_shift(temp_data, 'Temperature')
 # dist = distance(temp_data.iloc[0], temp_data.iloc[1])
