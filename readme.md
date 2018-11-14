@@ -5,3 +5,6 @@ Clustering weather data
 2. Take averages
 3. zscore_std.py
 4. 
+
+### Zip codes obtained from
+        https://simplemaps.com/data/us-zips
