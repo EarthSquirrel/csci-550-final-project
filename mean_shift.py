@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import math
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from datetime import datetime
 # from sklearn.neighbors import BallTree
 
@@ -33,7 +33,7 @@ def gauss_kernel(bandwidth, distance):
 #TODO pass columns array as a parameter
 def mean_shift(data, columns):
 	X = data[columns].copy()
-	iterations = 1
+	iterations = 5
 	past_X = []
 	break_loop = False
 	for it in range(iterations):
@@ -44,27 +44,24 @@ def mean_shift(data, columns):
 			numerator = 0
 			denominator = 0
 			
-			for xi in neighbors:
-				print("xi : ", xi)
+			if len(neighbors) == 0: continue
+
+			for neighbor in neighbors:
+				print("neighbor : ", neighbor)
 				print("x : ", x)
-				dist = distance(xi[columns], x[columns])
+				dist = distance(neighbor[columns], x[columns])
 				weight = gauss_kernel(kernel_bandwidth, dist)
 				print("Distance :", dist)
 				print("Weight: ", weight)
-				# d = (kernel_bandwidth * np.sqrt(2 * math.pi) * np.exp(-0.5 * ((dist / kernel_bandwidth)**2)))
-				
-				# if d == 0:
-				# 	print("d = 0: ")
-				# 	print(xi[columns])
-				# 	print("dist: ", dist)
-
-				# weight = 1 / d
-				numerator += weight * xi[columns]
+				numerator += weight * neighbor[columns]
 				denominator += weight
+				print("Numerator: ", numerator)
+				print("Denominator: ", denominator)
 				print("\n")
-
+			
 			x_prime = numerator / denominator
-			# print("x prime: ", x_prime)
+			print("x prime: ", x_prime)
+			print("\n")
 			X.loc[i, columns] = x_prime
 
 		past_X.append(X.copy())
@@ -78,7 +75,7 @@ temp_data = data.iloc[0:30]
 
 
 start_time = datetime.now()
-mean_shift(temp_data, ['Temperature', 'Humidity'])
+mean_shift(data, ['Temperature', 'Humidity'])
 print("RUN TIME: ", datetime.now() - start_time)
 
 
