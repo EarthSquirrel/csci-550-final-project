@@ -61,14 +61,81 @@ def build(data, k):
     print('\n\nFinal TD: {} medoids: {}'.format(TD, M))
     print('Located at: {}'.format(M_index))
 
+    return TD, (M, M_index)
 
-def swap(data, TD, M):
-    # TODO: Put code for swap method here
-    pass
+
+# create distance table
+def build_dist_table(data, M, M_index):
+    dist_table = []
+    dist_index = []
+    for x in data:
+        temp_m = []
+        for i, m in enumerate(M):
+            temp_m.append(calc_dist(x, m))
+        first = min(temp_m)
+        first_index = temp_m.index(first)
+        # set the first to inf, to get the second min
+        temp_m[first_index] = math.inf
+        second = min(temp_m)
+        second_index = np.argmin(temp_m)  #
+        dist_table.append([first, second])
+        dist_index.append([first_index, second_index])
+
+    return dist_table, dist_index
+
+
+# PAM+
+def swap(data, TD, Med, Dist):
+    M, M_index = Med
+    dist, dist_index = Dist
+    # the algorithm just says repeat.....
+    for x in range(1):
+        cTD = 0
+        m_temp, x_temp = 0, 0  # store temp indicies
+        for j in [jj for jj in range(len(data)) if jj not in M_index]:
+            dj = dist[j][0]
+            ctd = [-dj for jj in range(len(M))]  # add new dist for each medoid
+            for o in [oo for oo in range(len(data)) if oo != j]:
+                doj = calc_dist(data[o], data[j])
+                n = dist_index[o][0]
+                dn, ds = dist[o]  # add first and second nearest dist
+                ctd[n] = ctd[n] + min([doj, ds]) - dn
+                if doj < dn:
+                    for i in [ii for ii in range(len(M)) if ii != n]:
+                        ctd[i] = ctd[i] + doj - dn
+            i = np.argmin(ctd)
+            if ctd[i] < cTD:
+                cTD = ctd[i]
+                m_temp = i
+                x_temp = j
+            if cTD >= 0:
+                break
+        # swap roles of m_temp and x_temp:w
+        M[m_temp] = data[x_temp]
+        M_index[m_temp] = x_temp
+        dist, dist_index = build_dist_table(data, M, M_index)
+
+        TD = TD + cTD
+    return TD, (M, M_index), (dist, dist_index)
+
+
+def cluster_from_dist(dist_index, k):
+    clusters = [[] for x in range(k)]
+    for i, d in enumerate(dist_index):
+        clusters[d].append(i)
+    return clusters
 
 
 if __name__ == '__main__':
     print('Running as main class')
     k = 2  # number of clusters
-    data = read_data('simple11.csv', seper=' ')
-    build(data, k)
+    data = read_data('simple01.csv', seper=' ')
+    TD, Med = build(data, k)
+    dist_table, dist_i = build_dist_table(data, Med[0], Med[1])
+    Dist = (dist_table, dist_i)
+    print(dist_table)
+    print(dist_i)
+    print('build TD: {0:.3f}'.format(TD))
+    TD, Med, Dist = swap(data, TD, Med, Dist)
+    print('\n\nfinal TD: {0:.3f}'.format(TD))
+    print(Dist[1])
