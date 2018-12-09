@@ -5,8 +5,15 @@ from datetime import datetime
 import calendar
 from threading import Thread
 import multiprocessing as mp
+import concurrent.futures
+from itertools import repeat
 
-df_small = pd.read_csv('./get-weather-files/ws-cities-1-10-data.csv', converters={'zip': lambda x: str(x)})
+df_small = pd.read_csv('./get-weather-files/ws-cities-1-10-data.csv', 
+						converters={'zip': lambda x: str(x)})
+df_1 = pd.read_csv('./get-weather-files/ws-cities-1-5-data.csv', 
+					converters={'zip': lambda x: str(x)})
+df_2 = pd.read_csv('./get-weather-files/ws-cities-5-10-data.csv', 
+					converters={'zip': lambda x: str(x)})
 start_time = datetime.now()
 # df_1 = pd.read_csv('./get-weather-files/ws-cities-1-250-data.csv', converters={'zip': lambda x: str(x)})
 # df_2 = pd.read_csv('./get-weather-files/ws-cities-250-500-data.csv', converters={'zip': lambda x: str(x)})
@@ -162,7 +169,7 @@ def get_monthly_avgs(dataframe, zip_code, column):
 #END FUNCTION
 
 
-def _get_monthly_avgs(df, zip_code):
+def _get_monthly_avgs(df,zip_code):
 	cols = ['AWND', 'PRCP', 'SNOW', 'SNWD', 'TMAX', 'TMIN', 'WT08', 'WT11']
 
 	jan_sums = dict({'AWND' : 0, 'PRCP' : 0, 'SNOW' : 0, 'SNWD' : 0, 'TMAX' : 0, 'TMIN' : 0, 'WT08' : 0, 'WT11' : 0}) 
@@ -312,7 +319,7 @@ def _get_monthly_avgs(df, zip_code):
 # END FUNCTION
 
 
-def make_avgs_df(df):
+def _make_avgs_df(df):
 	wind_speed_col = []
 	precip_col = []
 	snow_fall_col = []
@@ -359,6 +366,24 @@ def make_avgs_df(df):
 
 # END FUNCTION
 
+def make_avgs_df(df):
+	with concurrent.futures.ProcessPoolExecutor() as executor:
+		zip_codes = df.zip.unique()
+		cols = ['AWND', 'PRCP', 'SNOW', 'SNWD', 'TMAX', 'TMIN', 'WT08', 'WT11']
+		avgs = []
+		i = 0
+		for avg in executor.map(_get_monthly_avgs, repeat(df), zip_codes):
+			i += 1
+			print("On zip", i, "/", len(zip_codes))
+			avgs += avg
+
+		return avgs
+
+def build_dataframe(df1, df2):
+	with concurrent.futures.ProcessPoolExecutor() as executor:
+
+
+
 
 def get_zip_counts(zip_code):
 	count = 0
@@ -371,27 +396,33 @@ def get_zip_counts(zip_code):
 # END FUNCTION
 
 
+
 zip_codes = df_small.zip.unique()
-cols = ['AWND', 'PRCP', 'SNOW', 'SNWD', 'TMAX', 'TMIN', 'WT08', 'WT11']
+# cols = ['AWND', 'PRCP', 'SNOW', 'SNWD', 'TMAX', 'TMIN', 'WT08', 'WT11']
+avgs = []
 
+for zc in zip_codes:
+	avgs += _get_monthly_avgs(df_small, zip_codes[0])
 
-avgs = _get_monthly_avgs(df_small, zip_codes[0])
-months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-indices = []
+for avg in avgs:
+	print(avg)
+
+# months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+# indices = []
 # for zc in zip_codes:
 # 	for month in months:
 # 		indices.append(zc + '-' + month)
 
-for month in months:
-	indices.append(zip_codes[0] + '-' + month)
 
+# monthly_avg_df = pd.DataFrame(columns=cols, index=indices)
 
-monthly_avg_df = pd.DataFrame(columns=cols, index=indices)
+# for i in range(len(monthly_avg_df)):
+# 	monthly_avg_df.loc[indices[i]] = avgs[i]
 
-for i in range(len(monthly_avg_df)):
-	monthly_avg_df.loc[indices[i]] = avgs[i]
+# print(monthly_avg_df)
 
-print (monthly_avg_df)
+# monthly_avg_df.to_csv('./test_df_2.csv')
+# make_avgs_df(df_small)
 
 print("RUN TIME: ", datetime.now() - start_time)
 
