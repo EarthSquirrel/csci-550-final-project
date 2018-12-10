@@ -107,19 +107,23 @@ def mean_shift_vec(data, columns, radius):
 	# build matix of distances
 	# Each row stores an array of distances to every other point from that point
 	# I.e. row 1 stores distances to each other point from point 1
-	dist_matrix = euclidean_distances(X.values, X.values)
-	weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
 
 	for it in range(iterations):
 		print("ITERATION ", it)
 		print("Elapsed time:", datetime.now() - start_time)
-		for i,row in X.iterrows():
-			print("Row", i)
-			print("Elapsed time:", datetime.now() - start_time)
-			numerator = np.sum(weight_mtx[i] * X.values[i])
-			denominator = np.sum(weight_mtx[i])
-			x_prime = numerator / denominator
-			X[i] = x_prime
+		if it == 0:
+			dist_matrix = euclidean_distances(X.values, X.values)
+		else :
+			dist_matrix = euclidean_distances(X,X)
+		
+		weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
+
+		shifted_pts = np.dot(weight_mtx, X)
+		summed_weight = np.sum(weight_mtx, 0)
+		shifted_pts /= np.expand_dims(summed_weight, 1)
+		X = shifted_pts
+
+	return X
 
 # END FUNCTION
 
@@ -128,9 +132,10 @@ def mean_shift_vec(data, columns, radius):
 cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
 data = pd.read_csv('./full-monthly-avgs.csv')
-temp_data = data[cols].iloc[0:10]
+temp_data = data.iloc[0:10]
 
-# mean_shift_vec(data, ['PRCP','SNOW','SNWD','TMAX','TMIN'], 5)
+# mean_shift_vec(temp_data, cols, 200)
+mean_shift(temp_data,cols,200)
 
 # shifted_df = pd.DataFrame(data=shifted_data[4])
 # make_plot(shifted_df, ['Temperature', 'Humidity'], 5)
@@ -143,47 +148,6 @@ temp_data = data[cols].iloc[0:10]
 # arr = temp_data.values
 # neighbor_mtx = make_neighbor_mtx(dist_mat, 6)
 # mean_shift(temp_data, ['Temperature', 'Humidity'], 6)
-
-X = temp_data[cols].copy()
-dist_mat = euclidean_distances(X.values, X.values)
-weight_mtx = gauss_kernel(kernel_bandwidth, dist_mat)
-
-#Find neighbors
-
-# neighbors = neighborhood_pts(X, X.iloc[3], cols, radius=200)
-numerator = 0
-denominator = 0
-weights = []
-dists = []
-point = X.iloc[3]
-sum_weight = np.sum(weight_mtx[3])
-sum_points = np.sum(X.values)
-num = 0
-shifted_pts = np.dot(weight_mtx, X)
-summed_weight = np.sum(weight_mtx, 0)
-shifted_pts /= np.expand_dims(summed_weight, 1)
-
-print(shifted_pts[3])
-
-
-for i,x in X.iterrows():
-	dist = distance(point, x)
-	dists.append(dist)
-	weight = gauss_kernel(kernel_bandwidth, dist)
-	weights.append(weight)
-	numerator += weight * x.values
-	denominator += weight
-# END LOOP
-
-x_prime = numerator / denominator
-# print("Dists: ", dists)
-# print("Weights: ", weights)
-# print("Num = ", numerator)
-# print("Den = ", denominator)
-print("X' = ", x_prime)
-
-
-
 
 
 print("RUN TIME: ", datetime.now() - start_time)
