@@ -9,12 +9,10 @@ import concurrent.futures
 from itertools import repeat
 
 start_time = datetime.now()
-# df = pd.read_csv('./get-weather-files/ws-cities-1-10-data.csv', converters={'zip': lambda x: str(x)})
-# df = pd.read_csv('./get-weather-files/ws-cities-1-5-data.csv', converters={'zip': lambda x: str(x)})
-df = pd.read_csv('./get-weather-files/ws-cities-5-10-data.csv', converters={'zip': lambda x: str(x)})
 
-# df_1 = pd.read_csv('./get-weather-files/ws-cities-1-250-data.csv', converters={'zip': lambda x: str(x)})
-# df_2 = pd.read_csv('./get-weather-files/ws-cities-250-500-data.csv', converters={'zip': lambda x: str(x)})
+# df = pd.read_csv('./get-weather-files/ws-cities-500-750-data.csv', converters={'zip': lambda x: str(x)})
+df = pd.read_csv('./get-weather-files/ws-cities-750-1000-data.csv', converters={'zip': lambda x: str(x)})
+
 print("Read all files")
 
 def get_monthly_avgs(dataframe, zip_code, column):
@@ -447,7 +445,7 @@ for i in range(len(monthly_avg_df)):
         monthly_avg_df.loc[indices[i]] = avgs[i]
 
 print(monthly_avg_df)
-monthly_avg_df.to_csv('./test-df-5-10.csv')
+monthly_avg_df.to_csv('./test-df-750-1000.csv')
 
 
 
