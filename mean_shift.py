@@ -6,7 +6,9 @@ from datetime import datetime
 # from sklearn.neighbors import BallTree
 from sklearn.metrics.pairwise import euclidean_distances
 
-kernel_bandwidth = 4
+start_time = datetime.now()
+
+kernel_bandwidth = 75
 
 
 def distance(x, xi):
@@ -46,7 +48,7 @@ def make_neighbor_mtx(dist_mtx, radius):
 		for j, dist in enumerate(row):
 			if dist <= 6:
 				neighbor_mtx[i][j] = 1
-	return(neighbor_mtx)
+	return neighbor_mtx
 
 
 def get_neighbors_from_mtx(point_index, neighbor_mtx, data):
@@ -72,8 +74,10 @@ def mean_shift(data, columns, radius):
 	break_loop = False
 	for it in range(iterations):
 		print("ITERATION: ", it)
+		print("Elapsed time:", datetime.now() - start_time)
 		for i,x in X.iterrows(): #For each point in X
 			print("Point ", i, "/", len(X))
+			print("Elapsed time: ", datetime.now() - start_time)
 			#Find neighbors
 			neighbors = neighborhood_pts(X, x, columns, radius)
 
@@ -99,42 +103,90 @@ def mean_shift(data, columns, radius):
 # Vectorized attempt
 def mean_shift_vec(data, columns, radius):
 	X = data[columns].copy()
+	iterations = 5
 	# build matix of distances
 	# Each row stores an array of distances to every other point from that point
 	# I.e. row 1 stores distances to each other point from point 1
-	dist_matrix = euclidean_distances(X.values. X.values)
+	dist_matrix = euclidean_distances(X.values, X.values)
 	weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
 
-	for i,row in X.iterrows():
-		numerator = np.sum(weight_mtx[i] * X.values[i])
-		denominator = np.sum(weight_mtx[i])
-		x_prime = numerator / denominator
+	for it in range(iterations):
+		print("ITERATION ", it)
+		print("Elapsed time:", datetime.now() - start_time)
+		for i,row in X.iterrows():
+			print("Row", i)
+			print("Elapsed time:", datetime.now() - start_time)
+			numerator = np.sum(weight_mtx[i] * X.values[i])
+			denominator = np.sum(weight_mtx[i])
+			x_prime = numerator / denominator
+			X[i] = x_prime
 
 # END FUNCTION
 
 
 
+cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
-data = pd.read_csv('data/monthly_avgs.csv')
-temp_data = data[['Temperature', 'Humidity']].iloc[0:10]
+data = pd.read_csv('./full-monthly-avgs.csv')
+temp_data = data[cols].iloc[0:10]
 
+# mean_shift_vec(data, ['PRCP','SNOW','SNWD','TMAX','TMIN'], 5)
 
-start_time = datetime.now()
-shifted_data = mean_shift(data, ['Temperature', 'Humidity'], 5)
-shifted_df = pd.DataFrame(data=shifted_data[4])
-make_plot(shifted_df, ['Temperature', 'Humidity'], 5)
-print(shifted_df)
-shifted_df.to_csv('../Mean Shift Trials/shifted_data.csv')
-print("RUN TIME: ", datetime.now() - start_time)
+# shifted_df = pd.DataFrame(data=shifted_data[4])
+# make_plot(shifted_df, ['Temperature', 'Humidity'], 5)
+# print(shifted_df)
+# shifted_df.to_csv('../Mean Shift Trials/shifted_data.csv')
 
 
 
 # start_time = datetime.now()
 # arr = temp_data.values
-# dist_mat = euclidean_distances(arr, arr)
-# weight_mtx = gauss_kernel(kernel_bandwidth, dist_mat)
 # neighbor_mtx = make_neighbor_mtx(dist_mat, 6)
 # mean_shift(temp_data, ['Temperature', 'Humidity'], 6)
+
+X = temp_data[cols].copy()
+dist_mat = euclidean_distances(X.values, X.values)
+weight_mtx = gauss_kernel(kernel_bandwidth, dist_mat)
+
+#Find neighbors
+
+# neighbors = neighborhood_pts(X, X.iloc[3], cols, radius=200)
+numerator = 0
+denominator = 0
+weights = []
+dists = []
+point = X.iloc[3]
+sum_weight = np.sum(weight_mtx[3])
+sum_points = np.sum(X.values)
+num = 0
+shifted_pts = np.dot(weight_mtx, X)
+summed_weight = np.sum(weight_mtx, 0)
+shifted_pts /= np.expand_dims(summed_weight, 1)
+
+print(shifted_pts[3])
+
+
+for i,x in X.iterrows():
+	dist = distance(point, x)
+	dists.append(dist)
+	weight = gauss_kernel(kernel_bandwidth, dist)
+	weights.append(weight)
+	numerator += weight * x.values
+	denominator += weight
+# END LOOP
+
+x_prime = numerator / denominator
+# print("Dists: ", dists)
+# print("Weights: ", weights)
+# print("Num = ", numerator)
+# print("Den = ", denominator)
+print("X' = ", x_prime)
+
+
+
+
+
+print("RUN TIME: ", datetime.now() - start_time)
 
 
 
