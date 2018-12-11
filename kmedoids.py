@@ -9,7 +9,6 @@ from sklearn.metrics.pairwise import euclidean_distances as euclid
 # set global options
 # np.set_printoptions(precision=3)
 start_time = dt.now()
-use_dist_matrix = False
 
 
 # read in data set
@@ -51,11 +50,7 @@ def build(data, k, distm=0):
             if tdj < TD:
                 TD, M[0] = tdj, xi
                 M_index[0] = i
-                # loc_in_M = i
-                # print(M)
-                # print('assigned new TD: {} for xi: {}'.format(TD, i))
 
-    # del data[loc_in_M]
     for i in range(1, k):
         print('\tMedoid {}.....'.format(i))
         cTD = math.inf  # change in TD
@@ -66,22 +61,14 @@ def build(data, k, distm=0):
             ctd = 0  # test td
             for o in [oo for oo in range(len(data)) if oo not in M_index or
                       M != j]:
-                # xo = data[o]
-                # print('taking min from: ', M[0:i])
                 min_mo = min([distm[o][mm] for mm in M_index[0:i]])
                 delta = distm[o][j] - min_mo
                 if delta < 0:
                     ctd = ctd + delta
             if ctd < cTD:
-                cTD = ctd
-                M[i] = xj
-                M_index[i] = j
-                # print('added new m: {} at {} with cTD {}'.format(xj, j, cTD))
+                cTD, M[i], M_index[i] = ctd, xj, j
         TD = cTD + TD
 
-    # print final medoids
-    # print('\n\nFinal TD: {} medoids: {}'.format(TD, M))
-    # print('Located at: {}'.format(M_index))
     print('\tRuntime for build: {}'.format(dt.now()-start_time))
 
     return TD, (M, M_index)
@@ -131,8 +118,9 @@ def swap(data, TD, Med, Dist, distm):
     dist, dist_index = Dist
     old_index_M = [[], [], M_index]
 
+    inter_med = []  # hold the middle medoids
     # get k, assuming will need k itterations to find a good cluster
-    kp = len(Med[0]) + 1
+    kp = len(Med[0]) + 3
 
     # the algorithm just says repeat.....
     # while not compare_medoids(old_index_M):
@@ -174,7 +162,9 @@ def swap(data, TD, Med, Dist, distm):
         TD = TD + cTD
         # add index set to list
         old_index_M.append(M_index.copy())
-    return TD, (M, M_index), (dist, dist_index)
+        inter_med.append(M_index)  # track medoid chain
+
+    return TD, (M, M_index), (dist, dist_index), inter_med
 
 
 def cluster_from_dist(dist_index, k):
@@ -184,6 +174,7 @@ def cluster_from_dist(dist_index, k):
     return clusters
 
 
+# used to compare test data with pyclustering
 def print_info(data, M, C, output=''):
     output += str(M[0])
     for i in range(1, len(M)):
@@ -226,18 +217,6 @@ def test_run(csv_name, k, data=0):
         myfile.write(out)
 
 
-def cluster(data, k):
-    TD, Med = build(data, k)
-    print('initial medoids: {} \n\t {}'.format(Med[1], Med[0]))
-    dist_table, dist_i = build_dist_table(data, Med[0], Med[1])
-    Dist = (dist_table, dist_i)
-    # swap method
-    TD, Med, Dist = swap(data, TD, Med, Dist)
-    # get clusters
-    clus = cluster_from_dist(dist_i, k)
-    return Med[1], clus
-
-
 def output_clusters(clusters, file_name='none'):
     # print clusters to csv
     print_clusters = ''
@@ -272,12 +251,13 @@ def track(data, k, csv_name='undeclared'):
 
     # swap method
     Dist = build_dist_table(data, Med[0], Med[1], distm)  # table, index
-    TD, Med, Dist = swap(data, TD, Med, Dist, distm)
+    TD, Med, Dist, inter = swap(data, TD, Med, Dist, distm)
 
     # get clusters
     clus = cluster_from_dist(Dist[1], k)
 
-    out = 'Final TD: ' + str(TD) + ' Medoids: ' + str(Med[1]) + '\n'
+    out = 'Progress medoids: ' + str(inter) + '\n'
+    out += 'Final TD: ' + str(TD) + ' Medoids: ' + str(Med[1]) + '\n'
     out += 'Clusters are: \n'
     out += output_clusters(clus)
 
@@ -322,63 +302,3 @@ if __name__ == '__main__':
     data = data[0:2000]
 
     track(data, k, file_name)
-    """
-    # read in distance matrix from file
-    # distm = read_data('avg-data3-8-dist-matrix.csv', headers=None)
-    TD, Med = build(data, k, distm)
-    dist_table, dist_i = build_dist_table(data, Med[0], Med[1])
-    Dist = (dist_table, dist_i)
-    TD, Med, Dist = swap(data, TD, Med, Dist, distm)
-    clus = cluster_from_dist(dist_i, k)
-    print('c1: {} c2: {}'.format(len(clus[0]), len(clus[1])))
-    output_clusters(clus)
-
-    # calc nc on clusters
-    cut = nc.calculate(clus, distm)
-    print(cut)
-    """
-    # data = read_data('simple01.csv', ' ')
-    # test_run('full-monthly-avgs.csv', 2, data)
-    # dm = make_dist_matrix_and_file(data, 'avg-data2-8-dist-matrix.csv')
-    # print('len dm: {}'.format(len(dm)))
-    # print(dm[0:4][0:5])
-
-    """
-    TD, Med = build(data, k)
-    dist_table, dist_i = build_dist_table(data, Med[0], Med[1])
-    Dist = (dist_table, dist_i)
-    TD, Med, Dist = swap(data, TD, Med, Dist)
-    clus = cluster_from_dist(dist_i, k)
-    print('c1: {} c2: {}'.format(len(clus[0]), len(clus[1])))
-
-    output = file_name + ' with ' + str(k) + ' clusters and a runtime of '
-    output += str(dt.now() - start_time) + '\n'
-    out_file_name = file_name + '-' + str(start_time)
-    with open(out_file_name, "a") as myfile:
-        myfile.write(print_info(data, Med[0], clus, output))
-    """
-
-    """
-    k = 2  # number of clusters
-    data = read_data('simple01.csv', seper=' ')
-    TD, Med = build(data, k)
-    print('med: ', Med)
-    # Med[0][0],Med[1][0] = data[6],6
-    # Med[0][1],Med[1][1] = data[7],7
-    # print(Med)
-    dist_table, dist_i = build_dist_table(data, Med[0], Med[1])
-    Dist = (dist_table, dist_i)
-    # print(dist_table)
-    # print(dist_i)
-    print('build TD: {0:.3f}'.format(TD))
-    TD, Med, Dist = swap(data, TD, Med, Dist)
-    print('\n\nfinal TD: {0:.3f}'.format(TD))
-    # print(Dist[1])
-    print('\nmed ', Med)
-    print('\n\n\n')
-    clus = cluster_from_dist(dist_i, k)
-    print('len: ', len(clus))
-    print(clus)
-    out = print_info(data, Med[0], clus, 'simple01.csv\n')
-    print(out)
-    """
