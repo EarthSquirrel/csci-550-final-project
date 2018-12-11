@@ -3,12 +3,14 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from datetime import datetime
-# from sklearn.neighbors import BallTree
 from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.cluster import MeanShift
+np.set_printoptions(precision=5, suppress=True)
+
 
 start_time = datetime.now()
 
-kernel_bandwidth = 75
+kernel_bandwidth = 0.75
 
 
 def distance(x, xi):
@@ -69,73 +71,138 @@ def make_plot(data, columns, radius):
 
 def mean_shift(data, columns, radius):
 	X = data[columns].copy()
-	iterations = 5
-	past_X = []
+	past_x = X.copy()
+	iterations = 1
+	# past_X = []
 	break_loop = False
 	for it in range(iterations):
+		dist_matrix = []
 		print("ITERATION: ", it)
 		print("Elapsed time:", datetime.now() - start_time)
 		for i,x in X.iterrows(): #For each point in X
-			print("Point ", i, "/", len(X))
-			print("Elapsed time: ", datetime.now() - start_time)
+			print("POINT ", i, ": ")
 			#Find neighbors
-			neighbors = neighborhood_pts(X, x, columns, radius)
-
+			# neighbors = neighborhood_pts(X, x, columns, radius)
 			numerator = 0
 			denominator = 0
-			
-			if len(neighbors) == 0: continue
+			current_dist = []
 
-			for neighbor in neighbors:
-				dist = distance(neighbor[columns], x[columns])
+			for j,y in X.iterrows():
+				dist = np.linalg.norm(x[columns] - y[columns])
+				current_dist.append(dist)
 				weight = gauss_kernel(kernel_bandwidth, dist)
-				numerator += weight * neighbor[columns]
+				numerator += weight * y[columns]
 				denominator += weight
 			# END LOOP
-			x_prime = numerator / denominator
+			dist_matrix.append(current_dist)
+			print("numerator = ", numerator.values)
+			print("denominator = ", denominator)
+			x_prime = numerator.values / denominator
+			print("xprime = ", x_prime)
 			X.loc[i, columns] = x_prime
 		# END LOOP
-		past_X.append(X.copy())
+		past_x = X.copy()
 	# END LOOP
-	return past_X
+	
+	return past_x
 # END FUNCTION
 
 # Vectorized attempt
 def mean_shift_vec(data, columns, radius):
 	X = data[columns].copy()
-	iterations = 5
-	# build matix of distances
-	# Each row stores an array of distances to every other point from that point
-	# I.e. row 1 stores distances to each other point from point 1
+	shifted_pts = X.copy()
+	iterations = 1
 
 	for it in range(iterations):
 		print("ITERATION ", it)
 		print("Elapsed time:", datetime.now() - start_time)
-		if it == 0:
-			dist_matrix = euclidean_distances(X.values, X.values)
-		else :
-			dist_matrix = euclidean_distances(X,X)
 		
+		# if it == 0:
+		# 	dist_matrix = euclidean_distances(shifted_pts, shifted_pts)
+		# else :
+		# 	dist_matrix = euclidean_distances(shifted_pts,shifted_pts)
+		dist_matrix = euclidean_distances(shifted_pts,shifted_pts)
+
+		print("DIST MTX:")
+		print(dist_matrix)
+
 		weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
 
-		shifted_pts = np.dot(weight_mtx, X)
-		summed_weight = np.sum(weight_mtx, 0)
-		shifted_pts /= np.expand_dims(summed_weight, 1)
-		X = shifted_pts
+		print("WEIGHT MTX:")
+		print(weight_mtx)
 
-	return X
+		exp_pts = np.dot(weight_mtx, shifted_pts)
+		summed_weight = np.sum(weight_mtx, 0)
+		print("Exp pts:")
+		print(exp_pts)
+		print("Summed Weight: ")
+		print(summed_weight)
+		shifted_pts = exp_pts / np.expand_dims(summed_weight, 1)
+		# X = shifted_pts
+
+	return shifted_pts
 
 # END FUNCTION
 
 
+# Test Version
+def mean_shift_vec_test(data):
+	X = data.copy()
+	shifted_pts = X.copy().values
+	iterations = 10
+
+	# for it in range(iterations):
+	i = 0
+	while i < 1:
+		i += 1
+		print("ITERATION ", i)
+		print("Elapsed time:", datetime.now() - start_time)
+		pts_last = shifted_pts
+		
+		dist_matrix = euclidean_distances(shifted_pts, shifted_pts)
+		print("DIST MTX:")
+		print(dist_matrix)
+		print("PTS LAST:")
+		print(pts_last)
+
+		weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
+
+		exp_pts = np.dot(weight_mtx, shifted_pts)
+		summed_weight = np.sum(weight_mtx, 0)
+		shifted_pts = exp_pts / np.expand_dims(summed_weight, 1)
+
+		print("SHIFTED PTS:")
+		print(shifted_pts)
+
+		diff = (shifted_pts - pts_last)**2
+		diff = diff.sum(axis=-1)
+		diff = np.sqrt(diff)
+		print("DIFF:")
+		print(diff)
+		if np.all([j <= 0.0001 for j in diff]): 
+			break
+
+	print("Total iterations:",i)
+	return shifted_pts
+
+# END FUNCTION
+
 
 cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
-data = pd.read_csv('./full-monthly-avgs.csv')
-temp_data = data.iloc[0:10]
+# data = pd.read_csv('./full-monthly-avgs.csv')
+# temp_data = data.iloc[0:10]
 
-# mean_shift_vec(temp_data, cols, 200)
-mean_shift(temp_data,cols,200)
+
+test_data = pd.read_csv('./test-data/simple01.data', sep=' ', header=None)
+
+# print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).labels_)
+
+shifted_pts = mean_shift_vec_test(test_data)
+print(shifted_pts)
+
+# new_df = pd.DataFrame(data=shifted_pts)
+
 
 # shifted_df = pd.DataFrame(data=shifted_data[4])
 # make_plot(shifted_df, ['Temperature', 'Humidity'], 5)
@@ -151,26 +218,4 @@ mean_shift(temp_data,cols,200)
 
 
 print("RUN TIME: ", datetime.now() - start_time)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

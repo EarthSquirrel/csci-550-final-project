@@ -2,15 +2,16 @@ import pandas as pd
 import numpy as np
 
 
-monthly_avg = 'monthly_avgs.csv'
+monthly_avg = 'full-monthly-avgs.csv'
 
 # read in csv file to df
 df = pd.read_csv(monthly_avg, header=0, index_col=0)
 
 columns = df.columns.values
 
-for col in columns:
+for col in columns[2:]:
     raw = df[col]
+    print(raw)
     mean = sum(raw)/len(raw)
     print("mean: ", mean)
     std = np.std(raw)
@@ -24,4 +25,4 @@ for col in columns:
 
 # check it was replaced
 print(df[:5])
-df.to_csv('montly_zscore.csv')
+df.to_csv('monthly_avg_zscore.csv')
