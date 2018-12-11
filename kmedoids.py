@@ -23,38 +23,6 @@ def read_data(csv_name, seper=',', headers='infer'):
     return data
 
 
-def make_dist_matrix(data):
-    data_len = len(data)
-    dist_matrix = np.ndarray(shape=(data_len, data_len), dtype=float)
-    for i in range(data_len):
-        for j in range(i, data_len):
-            dist_matrix[i][j] = calc_dist(data[i], data[j])
-            dist_matrix[j][i] = dist_matrix[j][i]
-    return dist_matrix
-
-
-def make_dist_matrix_and_file(data, file_name):
-    # calculate distance matrix for all values
-    data_len = len(data)
-    dist_matrix = np.ndarray(shape=(data_len, data_len), dtype=float)
-    for i in range(data_len):
-        for j in range(i, data_len):
-            dist_matrix[i][j] = calc_dist(data[i], data[j])
-            dist_matrix[j][i] = dist_matrix[j][i]
-
-    # put into string
-    string_dist = ''
-    for d in dist_matrix:
-        row = [str(dd) for dd in d]
-        string_dist += ','.join(row) + '\n'
-
-    # Write to file
-    with open(file_name, 'w') as f:
-        f.write(string_dist[:-1])
-
-    return dist_matrix
-
-
 # compute distance function
 def calc_dist(x1, x2):
     Z = x1-x2
@@ -65,12 +33,6 @@ def calc_dist(x1, x2):
 
 def build(data, k, distm=0):
     print('\nRunning build method.....')
-
-    # tell what distance is being used
-    if isinstance(distm, int):
-        print('build is calculating the distances')
-    else:
-        print('build is using precomputed distance matrix')
 
     # initialize variables
     TD = math.inf  # total deviation
@@ -85,16 +47,14 @@ def build(data, k, distm=0):
         tdj = 0
         # itterate through all data points that are not equal to xi
         for o in [ii for ii in range(len(data)) if ii != i]:
-            if isinstance(distm, int):
-                tdj = tdj + calc_dist(xi, data[o])
-            else:
-                tdj = tdj + distm[i][o]
+            tdj = tdj + distm[i][o]
             if tdj < TD:
                 TD, M[0] = tdj, xi
                 M_index[0] = i
                 # loc_in_M = i
                 # print(M)
                 # print('assigned new TD: {} for xi: {}'.format(TD, i))
+
     # del data[loc_in_M]
     for i in range(1, k):
         print('\tMedoid {}.....'.format(i))
@@ -108,12 +68,8 @@ def build(data, k, distm=0):
                       M != j]:
                 xo = data[o]
                 # print('taking min from: ', M[0:i])
-                if isinstance(distm, int):
-                    min_mo = min([calc_dist(xo, mm) for mm in M[0:i]])
-                    delta = calc_dist(xj, xo) - min_mo
-                else:
-                    min_mo = min([distm[o][mm] for mm in M_index[0:i]])
-                    delta = distm[o][j] - min_mo
+                min_mo = min([distm[o][mm] for mm in M_index[0:i]])
+                delta = distm[o][j] - min_mo
                 if delta < 0:
                     ctd = ctd + delta
             if ctd < cTD:
@@ -132,17 +88,14 @@ def build(data, k, distm=0):
 
 
 # create distance table
-def build_dist_table(data, M, M_index, distm=0):
+def build_dist_table(data, M, M_index, distm):
     # print('Creating a distance table....')
     dist_table = []
     dist_index = []
     for j, x in enumerate(data):
         temp_m = []
         for i, m in enumerate(M):
-            if isinstance(distm, int):
-                temp_m.append(calc_dist(x, m))
-            else:
-                temp_m.append(calc_dist(j, i))
+            temp_m.append(distm[j][i])
         first = min(temp_m)
         first_index = temp_m.index(first)
         # set the first to inf, to get the second min
@@ -170,13 +123,8 @@ def compare_medoids(index_list):
 
 
 # PAM+
-def swap(data, TD, Med, Dist, distm=0):
+def swap(data, TD, Med, Dist, distm):
     print('\nRunning swap method....')
-    # tell what distance is being used
-    if isinstance(distm, int):
-        print('swap is calculating the distances')
-    else:
-        print('swap is using precomputed distance matrix')
 
     # create needed variables
     M, M_index = Med
@@ -198,10 +146,7 @@ def swap(data, TD, Med, Dist, distm=0):
             dj = dist[j][0]
             ctd = [-dj for jj in range(len(M))]  # add new dist for each medoid
             for o in [oo for oo in range(len(data)) if oo != j]:
-                if isinstance(distm, int):
-                    doj = calc_dist(data[o], data[j])
-                else:
-                    doj = distm[o][j]
+                doj = distm[o][j]
                 n = dist_index[o][0]
                 dn, ds = dist[o]  # add first and second nearest dist
                 ctd[n] = ctd[n] + min([doj, ds]) - dn
