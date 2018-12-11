@@ -40,8 +40,8 @@ def get_neighbors(index, dist_mat, radius=6):
 
 
 def gauss_kernel(bandwidth, distance):
-	d = (bandwidth * np.sqrt(2 * math.pi) * np.exp(-0.5 * ((distance / bandwidth)**2)))
-	return (1 / d)
+    d = (1/(bandwidth * np.sqrt(2 * math.pi))) * np.exp(-0.5 * ((distance**2 / bandwidth**2)))
+    return d
 
 
 def make_neighbor_mtx(dist_mtx, radius):
@@ -68,6 +68,20 @@ def make_plot(data, columns, radius):
 	ax.plot(data[columns[0]].values, data[columns[1]].values, 'o')
 	plt.savefig(filename)
 
+def shift(X, pt):
+	numerator = 0
+	denominator = 0
+	for i,x in X.iterrows():
+		# print("point", i, "=", x.values)
+		dist = distance(x, pt)
+		# print("dist = ", dist)
+		weight = gauss_kernel(kernel_bandwidth, dist)
+		# print("weight = ", weight)
+		numerator += x * weight
+		denominator += weight
+	# END LOOP
+	x_prime = numerator / denominator
+	return x_prime
 
 def mean_shift(data, columns, radius):
 	X = data[columns].copy()
@@ -106,6 +120,27 @@ def mean_shift(data, columns, radius):
 	
 	return past_x
 # END FUNCTION
+
+def mean_shift_test(data):
+	X = data.copy()
+	X_orig = data.copy()
+	past_x = X.copy()
+	iterations = 5
+	# past_X = []
+	break_loop = False
+	for it in range(iterations):
+		# print("ITERATION: ", it)
+		# print("Elapsed time:", datetime.now() - start_time)
+		for i,x in X.iterrows(): #For each point in X
+			# print("POINT ", i, ": ")
+			X.iloc[i] = shift(X_orig,x)
+			# print("x prime = ", X.iloc[i].values)
+		# END LOOP
+	# END LOOP
+	return X
+# END FUNCTION
+
+
 
 # Vectorized attempt
 def mean_shift_vec(data, columns, radius):
@@ -153,34 +188,44 @@ def mean_shift_vec_test(data):
 
 	# for it in range(iterations):
 	i = 0
-	while i < 1:
-		i += 1
+	while i<5:
 		print("ITERATION ", i)
+		i += 1
 		print("Elapsed time:", datetime.now() - start_time)
 		pts_last = shifted_pts
 		
 		dist_matrix = euclidean_distances(shifted_pts, shifted_pts)
-		print("DIST MTX:")
-		print(dist_matrix)
-		print("PTS LAST:")
-		print(pts_last)
+		# print("DIST MTX:")
+		# print(dist_matrix)
+		# print("PTS LAST:")
+		# print(pts_last)
 
 		weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
+		# print("WEIGHT MTX")
+		# print(weight_mtx)
 
 		exp_pts = np.dot(weight_mtx, shifted_pts)
+		
+		# print("EXPD PTS")
+		# print(exp_pts)
+
 		summed_weight = np.sum(weight_mtx, 0)
+
+		# print("Summed Weight:")
+		# print(summed_weight)
+
 		shifted_pts = exp_pts / np.expand_dims(summed_weight, 1)
 
-		print("SHIFTED PTS:")
-		print(shifted_pts)
+		# print("SHIFTED PTS:")
+		# print(shifted_pts)
 
-		diff = (shifted_pts - pts_last)**2
-		diff = diff.sum(axis=-1)
-		diff = np.sqrt(diff)
-		print("DIFF:")
-		print(diff)
-		if np.all([j <= 0.0001 for j in diff]): 
-			break
+		# diff = (shifted_pts - pts_last)**2
+		# diff = diff.sum(axis=-1)
+		# diff = np.sqrt(diff)
+		# print("DIFF:")
+		# print(diff)
+		# if np.all([j <= 0.0001 for j in diff]): 
+		# 	break
 
 	print("Total iterations:",i)
 	return shifted_pts
@@ -194,27 +239,26 @@ cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 # temp_data = data.iloc[0:10]
 
 
-test_data = pd.read_csv('./test-data/simple01.data', sep=' ', header=None)
+test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
 
-# print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).labels_)
+
+# for i,x in X.iterrows():
+# 	print("i = ", i)
+# 	print("x = ", x)
+# 	for j,y in X.iterrows():
+# 		print("j = ", j)
+# 		print("y = ", y)
+
+print(MeanShift(bandwidth=1).fit(test_data).labels_)
+print(MeanShift(bandwidth=1).fit(test_data).cluster_centers_)
+
+
 
 shifted_pts = mean_shift_vec_test(test_data)
 print(shifted_pts)
 
-# new_df = pd.DataFrame(data=shifted_pts)
 
 
-# shifted_df = pd.DataFrame(data=shifted_data[4])
-# make_plot(shifted_df, ['Temperature', 'Humidity'], 5)
-# print(shifted_df)
-# shifted_df.to_csv('../Mean Shift Trials/shifted_data.csv')
-
-
-
-# start_time = datetime.now()
-# arr = temp_data.values
-# neighbor_mtx = make_neighbor_mtx(dist_mat, 6)
-# mean_shift(temp_data, ['Temperature', 'Humidity'], 6)
 
 
 print("RUN TIME: ", datetime.now() - start_time)
