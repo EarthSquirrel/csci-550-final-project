@@ -10,7 +10,7 @@ np.set_printoptions(precision=5, suppress=True)
 
 start_time = datetime.now()
 
-kernel_bandwidth = 0.75
+kernel_bandwidth = 200
 
 
 def distance(x, xi):
@@ -143,37 +143,43 @@ def mean_shift_test(data):
 
 
 # Vectorized attempt
-def mean_shift_vec(data, columns, radius):
+def mean_shift_vec(data, columns):
 	X = data[columns].copy()
-	shifted_pts = X.copy()
+	shifted_pts = X.copy().values
 	iterations = 1
-
-	for it in range(iterations):
+	it = 0
+	while True:
+		it += 1
 		print("ITERATION ", it)
 		print("Elapsed time:", datetime.now() - start_time)
-		
-		# if it == 0:
-		# 	dist_matrix = euclidean_distances(shifted_pts, shifted_pts)
-		# else :
-		# 	dist_matrix = euclidean_distances(shifted_pts,shifted_pts)
+		pts_last = shifted_pts
+		# Compute distance matrix for all points
 		dist_matrix = euclidean_distances(shifted_pts,shifted_pts)
 
-		print("DIST MTX:")
-		print(dist_matrix)
+		# print("DIST MTX:")
+		# print(dist_matrix)
 
+		# Compute weights for all points
 		weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
 
-		print("WEIGHT MTX:")
-		print(weight_mtx)
+		# print("WEIGHT MTX:")
+		# print(weight_mtx)
 
 		exp_pts = np.dot(weight_mtx, shifted_pts)
 		summed_weight = np.sum(weight_mtx, 0)
-		print("Exp pts:")
-		print(exp_pts)
-		print("Summed Weight: ")
-		print(summed_weight)
+		# print("Exp pts:")
+		# print(exp_pts)
+		# print("Summed Weight: ")
+		# print(summed_weight)
 		shifted_pts = exp_pts / np.expand_dims(summed_weight, 1)
-		# X = shifted_pts
+
+		diff = (shifted_pts - pts_last)**2
+		diff = diff.sum(axis=-1)
+		diff = np.sqrt(diff)
+		# print("DIFF:")
+		# print(diff)
+		if np.all([j <= 0.0001 for j in diff]): 
+			break
 
 	return shifted_pts
 
@@ -235,26 +241,20 @@ def mean_shift_vec_test(data):
 
 cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
-# data = pd.read_csv('./full-monthly-avgs.csv')
-# temp_data = data.iloc[0:10]
+data = pd.read_csv('./full-monthly-avgs.csv')
+temp_data = data.iloc[0:20]
 
 
-test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
+# test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
 
 
-# for i,x in X.iterrows():
-# 	print("i = ", i)
-# 	print("x = ", x)
-# 	for j,y in X.iterrows():
-# 		print("j = ", j)
-# 		print("y = ", y)
-
-print(MeanShift(bandwidth=1).fit(test_data).labels_)
-print(MeanShift(bandwidth=1).fit(test_data).cluster_centers_)
+print(MeanShift().fit(temp_data[cols]).labels_)
+print(MeanShift().fit(temp_data[cols]).cluster_centers_)
 
 
 
-shifted_pts = mean_shift_vec_test(test_data)
+shifted_pts = mean_shift_vec(temp_data, cols)
+print("FINAL DATA:")
 print(shifted_pts)
 
 
