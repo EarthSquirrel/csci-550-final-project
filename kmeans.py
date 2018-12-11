@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
+from datetime import datetime as dt
 import math
 from sklearn.metrics.pairwise import euclidean_distances as euclid
 import normalized_cut as nc
+start_time_in = dt.now()
 
 
 def calc_cluster_means(data, clusters):
@@ -13,7 +15,7 @@ def calc_cluster_means(data, clusters):
                        axis=0)/len(c)
             means.append(v)
         else:
-            means.append(0)
+            means.append([0 for z in range(len(data[0]))])
     return means
 
 
@@ -61,8 +63,69 @@ def cluster(data, means, k, error):
     return means, clusters, track_means
 
 
+def track_data(data, k, means, error, distm, file_name, notes=''):
+    with open(file_name, 'a') as f:
+        out = ''.join(['***' for x in range(15)]) + '\n'
+        out += 'Running kmeans where k = ' + str(k) + ' with ' + str(len(data))
+        out += ' instances\n' + notes + '\n'
+        f.write(out)
+
+    m, c, tm = cluster(data, means, k, error)
+
+    cut = nc.calculate(c, distm)
+
+    out = 'Total itteratioins: ' + str(len(tm)) + '\n'
+    out += 'Total runtime: ' + str(dt.now() - start_time) + '\n'
+    out += 'NC: ' + str(cut) + '\n'
+    out += 'Tracked means: ' + str(tm) + '\n\n'
+    out += 'Final means: ' + str(m) + '\n'
+
+    print_clusters = ''
+    for i in c:
+        print_clusters += ','.join([str(cc) for cc in i]) + '\n'
+    out += print_clusters
+
+    with open(file_name, 'a') as f:
+        f.write(out)
+
+    # make kmeans k tracking file
+    with open('runs/kmeans/track-k-nc.txt', 'a') as f:
+        out = str(k) + ',' + str(cut) + '\n'
+        f.write(out)
+
+    # write clusters specifically to file
+    with open('runs/kmeans/clusters.txt', 'a') as f:
+        out = '\n\n' + print_clusters
+        f.write(out)
+
+
 if __name__ == '__main__':
     print('running as main')
+
+    data = pd.read_csv('monthly_avg_zscore.csv').iloc[0:5000, 3:8].values
+    distm = euclid(data)
+    file_name = 'runs/kmeans/test-' + str(len(data)) + '-' + str(start_time_in)
+    notes = 'random means'
+
+    # Use initial medoids for starting means
+    init_medoids = [2304, 6435, 993, 5790, 2379, 11328, 181, 4461, 376, 2090,
+                    10137, 8858]
+
+    for k in range(2, 10):
+        start_time = dt.now()
+        error = .001**2*k  # each mean can only change by .001
+        means = random_initial_means(data, k)
+        # print('initial means: random: ', means)
+        track_data(data, k, means, error, distm, file_name, notes)
+
+        start_time = dt.now()
+        error = .001**2*k  # each mean can only change by .001
+        means = random_initial_means(data, k)
+        track_data(data, k, means, error, distm, file_name, notes)
+
+    print('final run time: ', (dt.now() - start_time_in))
+    # test data
+    """
     data = pd.read_csv('atom.csv', sep=' ', header=None).values
     k = 2
     # means = random_initial_means(data, k)
@@ -76,3 +139,4 @@ if __name__ == '__main__':
     distm = euclid(data)
     cut = nc.calculate(clusters, distm)
     print('nc: ', cut)
+    """
