@@ -13,6 +13,7 @@ def calculate(clust, distm):
         for cc in c:
             for cc2 in range(cc, len(c)):
                 win += distm[cc][cc2]
+        win = win/2
 
         # make array not in c
         others = [dd for dd in range(len(distm)) if dd not in c]
@@ -20,6 +21,7 @@ def calculate(clust, distm):
         for cc in c:
             for o in others:
                 wout += distm[cc][o]
+        wout = wout/2
 
         # add to sum for this itteration of k
         NC += 1/(win/wout + 1)
@@ -29,13 +31,13 @@ def calculate(clust, distm):
 
 
 def read_in_files(cluster_csv, distm_csv):
-    pass
+    clus = pd.read_csv(cluster_csv, header=None)
+    distm = pd.read_csv(distm_csv, header=None)
+    return clus, distm
 
 
 def simple_test():
     data = pd.read_csv('simple01.csv', sep=' ', header=None)
-    print(data)
-    print(data.columns.values)
     data = data.values
 
     # print([str(m) + '\n' for m in distm])
@@ -47,9 +49,13 @@ def simple_test():
             # print('dist {} {} = {}'.format(i, j, distm[i][j]))
             distm[j][i] = distm[i][j]
 
-    print(distm)
-    print(len(distm))
+    # print(distm)
+    # print(len(distm))
     c = [[0,1,2,3,4], [5,6,7,8,9]]
+    print(c)
+    calculate(c, distm)
+    c = [[5, 6, 8], [0, 1, 2, 3, 4, 7, 9]]
+    print(c)
     calculate(c, distm)
 
 
