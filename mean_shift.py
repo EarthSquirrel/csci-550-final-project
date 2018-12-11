@@ -14,7 +14,8 @@ kernel_bandwidth = 100
 
 
 def distance(x, xi):
-	return np.sqrt(np.sum((x-xi)**2))
+	# return np.sqrt(np.sum((x-xi)**2))
+	return np.linalg.norm(x-xi)
 
 
 def neighborhood_pts(X, x_centroid, columns, radius=6):
@@ -83,42 +84,22 @@ def shift(X, pt):
 	x_prime = numerator / denominator
 	return x_prime
 
-def mean_shift(data, columns, radius):
+def mean_shift(data, columns):
 	X = data[columns].copy()
 	past_x = X.copy()
-	iterations = 1
+	X_orig = data[columns].copy()
+	iterations = 10
 	# past_X = []
-	break_loop = False
 	for it in range(iterations):
-		dist_matrix = []
 		print("ITERATION: ", it)
 		print("Elapsed time:", datetime.now() - start_time)
 		for i,x in X.iterrows(): #For each point in X
-			print("POINT ", i, ": ")
-			#Find neighbors
-			# neighbors = neighborhood_pts(X, x, columns, radius)
-			numerator = 0
-			denominator = 0
-			current_dist = []
-
-			for j,y in X.iterrows():
-				dist = np.linalg.norm(x[columns] - y[columns])
-				current_dist.append(dist)
-				weight = gauss_kernel(kernel_bandwidth, dist)
-				numerator += weight * y[columns]
-				denominator += weight
-			# END LOOP
-			dist_matrix.append(current_dist)
-			print("numerator = ", numerator.values)
-			print("denominator = ", denominator)
-			x_prime = numerator.values / denominator
-			print("xprime = ", x_prime)
-			X.loc[i, columns] = x_prime
+			# print("POINT ", i, ": ")
+			X.iloc[i] = shift(X_orig,x)
+			# print("x prime = ", X.iloc[i].values)
 		# END LOOP
-		past_x = X.copy()
 	# END LOOP
-	
-	return past_x
+	return X
 # END FUNCTION
 
 def mean_shift_test(data):
@@ -244,9 +225,12 @@ cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
 data = pd.read_csv('./full-monthly-avgs.csv')
 temp_data = data.iloc[:20]
+print("Original data:")
+for i,x in temp_data.iterrows():
+	print(x[cols].values)
 
 
-test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
+# test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
 
 
 print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).labels_)
