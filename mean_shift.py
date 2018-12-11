@@ -10,7 +10,7 @@ np.set_printoptions(precision=5, suppress=True)
 
 start_time = datetime.now()
 
-kernel_bandwidth = 200
+kernel_bandwidth = 100
 
 
 def distance(x, xi):
@@ -40,7 +40,7 @@ def get_neighbors(index, dist_mat, radius=6):
 
 
 def gauss_kernel(bandwidth, distance):
-    d = (1/(bandwidth * np.sqrt(2 * math.pi))) * np.exp(-0.5 * ((distance**2 / bandwidth**2)))
+    d = (1 / (bandwidth * math.sqrt(2 * math.pi))) * np.exp(-0.5 * ((distance / bandwidth))**2)
     return d
 
 
@@ -178,7 +178,8 @@ def mean_shift_vec(data, columns):
 		diff = np.sqrt(diff)
 		# print("DIFF:")
 		# print(diff)
-		if np.all([j <= 0.0001 for j in diff]): 
+		if np.all([j <= 0.01 for j in diff]): 
+		# if it <= 5:
 			break
 
 	return shifted_pts
@@ -194,7 +195,7 @@ def mean_shift_vec_test(data):
 
 	# for it in range(iterations):
 	i = 0
-	while i<5:
+	while i < 5:
 		print("ITERATION ", i)
 		i += 1
 		print("Elapsed time:", datetime.now() - start_time)
@@ -207,8 +208,8 @@ def mean_shift_vec_test(data):
 		# print(pts_last)
 
 		weight_mtx = gauss_kernel(kernel_bandwidth, dist_matrix)
-		# print("WEIGHT MTX")
-		# print(weight_mtx)
+		print("WEIGHT MTX")
+		print(weight_mtx)
 
 		exp_pts = np.dot(weight_mtx, shifted_pts)
 		
@@ -242,20 +243,25 @@ def mean_shift_vec_test(data):
 cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
 data = pd.read_csv('./full-monthly-avgs.csv')
-temp_data = data.iloc[0:20]
+temp_data = data.iloc[:20]
 
 
-# test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
+test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
 
 
-print(MeanShift().fit(temp_data[cols]).labels_)
-print(MeanShift().fit(temp_data[cols]).cluster_centers_)
+print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).labels_)
+print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).cluster_centers_)
 
 
 
-shifted_pts = mean_shift_vec(temp_data, cols)
+shifted_pts = mean_shift(temp_data, cols)
+final_df = pd.DataFrame(data=shifted_pts)
+# print(final_df.drop_duplicates())
+
 print("FINAL DATA:")
-print(shifted_pts)
+for i,row in final_df.iterrows():
+	print(row.values)
+
 
 
 
