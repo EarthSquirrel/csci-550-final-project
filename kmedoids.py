@@ -42,7 +42,7 @@ def build(data, k, distm=0):
     # find first medoid
     print('\t Initial medoid.....')
     for i, xi in enumerate(data):
-        if i % 100 == 0:
+        if i % 1000 == 0:
             print('\t\tbuild point: {}'.format(i))
         tdj = 0
         # itterate through all data points that are not equal to xi
@@ -60,13 +60,13 @@ def build(data, k, distm=0):
         print('\tMedoid {}.....'.format(i))
         cTD = math.inf  # change in TD
         for j in [jj for jj in range(len(data)) if jj not in M_index]:
-            if j % 100 == 0:
+            if j % 1000 == 0:
                 print('\t\tPoint: {} of {}'.format(j, len(data)))
             xj = data[j]
             ctd = 0  # test td
             for o in [oo for oo in range(len(data)) if oo not in M_index or
                       M != j]:
-                xo = data[o]
+                # xo = data[o]
                 # print('taking min from: ', M[0:i])
                 min_mo = min([distm[o][mm] for mm in M_index[0:i]])
                 delta = distm[o][j] - min_mo
@@ -141,7 +141,7 @@ def swap(data, TD, Med, Dist, distm):
         cTD = 0
         m_temp, x_temp = 0, 0  # store temp indicies
         for j in [jj for jj in range(len(data)) if jj not in M_index]:
-            if j % 100 == 0:
+            if j % 1000 == 0:
                 print('\t\tLooking at data point: {}'.format(j))
             dj = dist[j][0]
             ctd = [-dj for jj in range(len(M))]  # add new dist for each medoid
@@ -168,7 +168,7 @@ def swap(data, TD, Med, Dist, distm):
         # swap roles of m_temp and x_temp:w
         M[m_temp] = data[x_temp]
         M_index[m_temp] = x_temp
-        dist, dist_index = build_dist_table(data, M, M_index)
+        dist, dist_index = build_dist_table(data, M, M_index, distm)
         print('\t\tFinished swap itteration, total runtime {}'.format(
               dt.now()-start_time))
         TD = TD + cTD
@@ -238,16 +238,60 @@ def cluster(data, k):
     return Med[1], clus
 
 
-def output_clusters(clusters):
+def output_clusters(clusters, file_name='none'):
     # print clusters to csv
     print_clusters = ''
     for c in clusters:
         print_clusters += ','.join([str(cc) for cc in c]) + '\n'
 
+    """
     # write to file
     output_name = 'medoid-test-run-' + str(start_time) + '.csv'
     with open(output_name, 'w') as f:
         f.write(print_clusters)
+    """
+    return print_clusters
+
+
+def track(data, k, csv_name='undeclared'):
+    # create initial file
+    output_name = 'runs/kmedoid-' + str(start_time)
+    with open(output_name, 'a') as f:
+        out = 'Testing kmedoids.py on ' + csv_name + ' where k =  ' + str(k)
+        out += ' with' + str(len(data)) + ' instances\n'
+        f.write(out)
+
+    # calculate distance matrix
+    distm = euclid(data)
+
+    # get intial medoids
+    TD, Med = build(data, k, distm)
+    with open(output_name, 'a') as f:
+        out = 'initial TD = ' + str(TD) + ' Medoids: ' + str(Med[1]) + '\n'
+        f.write(out)
+
+    # swap method
+    Dist = build_dist_table(data, Med[0], Med[1], distm)  # table, index
+    TD, Med, Dist = swap(data, TD, Med, Dist, distm)
+
+    # get clusters
+    clus = cluster_from_dist(Dist[1], k)
+
+    out = 'Final TD: ' + str(TD) + ' Medoids: ' + str(Med[1]) + '\n'
+    out += 'Clusters are: \n'
+    out += output_clusters(clus)
+
+    with open(output_name, 'a') as f:
+        f.write(out)
+
+    # calculate normalized cut
+    cut = nc.calculate(clus, distm)
+    out = 'Normalized cut: ' + str(cut) + '\n'
+    out += '\nTotal run time: ' + str(dt.now() - start_time)
+    with open(output_name, 'a') as f:
+        f.write(out)
+
+    return Med[1], clus
 
 
 if __name__ == '__main__':
@@ -275,7 +319,10 @@ if __name__ == '__main__':
     # use faster method to calculate distance matrix....
     distm = euclid(data)
 
-    data = data[0:5000]
+    data = data[0:2000]
+
+    track(data, k, file_name)
+    """
     # read in distance matrix from file
     # distm = read_data('avg-data3-8-dist-matrix.csv', headers=None)
     TD, Med = build(data, k, distm)
@@ -289,7 +336,7 @@ if __name__ == '__main__':
     # calc nc on clusters
     cut = nc.calculate(clus, distm)
     print(cut)
-
+    """
     # data = read_data('simple01.csv', ' ')
     # test_run('full-monthly-avgs.csv', 2, data)
     # dm = make_dist_matrix_and_file(data, 'avg-data2-8-dist-matrix.csv')
