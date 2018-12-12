@@ -5,17 +5,17 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import MeanShift
-np.set_printoptions(precision=5, suppress=True)
+np.set_printoptions(suppress=True)
 
 
 start_time = datetime.now()
 
-kernel_bandwidth = 100
-
+kernel_bandwidth = 1.5
+file_name = 'mean_shifted_data_bw_'+ str(kernel_bandwidth) + '_conv.csv'
 
 def distance(x, xi):
-	# return np.sqrt(np.sum((x-xi)**2))
-	return np.linalg.norm(x-xi)
+	return np.sqrt(np.sum((x-xi)**2))
+	# return np.linalg.norm(x-xi)
 
 
 def neighborhood_pts(X, x_centroid, columns, radius=6):
@@ -41,7 +41,7 @@ def get_neighbors(index, dist_mat, radius=6):
 
 
 def gauss_kernel(bandwidth, distance):
-    d = (1 / (bandwidth * math.sqrt(2 * math.pi))) * np.exp(-0.5 * ((distance / bandwidth))**2)
+    d = (1 / (bandwidth * math.sqrt(2 * math.pi))) * np.exp(-0.5 * ((distance / bandwidth)**2))
     return d
 
 
@@ -77,7 +77,6 @@ def shift(X, pt):
 		dist = distance(x, pt)
 		# print("dist = ", dist)
 		weight = gauss_kernel(kernel_bandwidth, dist)
-		# print("weight = ", weight)
 		numerator += x * weight
 		denominator += weight
 	# END LOOP
@@ -88,7 +87,7 @@ def mean_shift(data, columns):
 	X = data[columns].copy()
 	past_x = X.copy()
 	X_orig = data[columns].copy()
-	iterations = 10
+	iterations = 6
 	# past_X = []
 	for it in range(iterations):
 		print("ITERATION: ", it)
@@ -127,7 +126,6 @@ def mean_shift_test(data):
 def mean_shift_vec(data, columns):
 	X = data[columns].copy()
 	shifted_pts = X.copy().values
-	iterations = 1
 	it = 0
 	while True:
 		it += 1
@@ -157,10 +155,10 @@ def mean_shift_vec(data, columns):
 		diff = (shifted_pts - pts_last)**2
 		diff = diff.sum(axis=-1)
 		diff = np.sqrt(diff)
-		# print("DIFF:")
-		# print(diff)
+		print("DIFF:")
+		for d in diff:
+			print(d.round(5))
 		if np.all([j <= 0.01 for j in diff]): 
-		# if it <= 5:
 			break
 
 	return shifted_pts
@@ -223,29 +221,38 @@ def mean_shift_vec_test(data):
 
 cols = ['PRCP','SNOW','SNWD','TMAX','TMIN']
 
-data = pd.read_csv('./full-monthly-avgs.csv')
+data = pd.read_csv('./monthly_avg_zscore.csv')
 temp_data = data.iloc[:20]
-print("Original data:")
-for i,x in temp_data.iterrows():
-	print(x[cols].values)
 
 
 # test_data = pd.read_csv('./test-data/Simple12.csv', sep=' ', header=None)
+# labels_file = open('./mean-shifted-data/lables_bw_1.txt', 'w')
+# print("BANDWIDTH: ", kernel_bandwidth)
+# shift = MeanShift(bandwidth=kernel_bandwidth).fit(data[cols])
+# print("LABELS:")
+# labels = shift.labels_
+# for l in labels:
+# 	labels_file.write(str(l)+"\n")
+# print("CENTERS:")
+# for c in shift.cluster_centers_:
+# 	print(c)
 
 
-print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).labels_)
-print(MeanShift(bandwidth=kernel_bandwidth).fit(temp_data[cols]).cluster_centers_)
+
+shifted_pts = mean_shift_vec(data, cols)
+shifted_df = pd.DataFrame(data=shifted_pts, columns=cols)
+shifted_df.to_csv('./mean-shifted-data/'+file_name)
+
+centers = shifted_df.drop_duplicates(subset=['PRCP','SNOW','SNWD','TMAX','TMIN'])
+
+print("BANDWIDTH: ", kernel_bandwidth)
+print("CENTERS:")
+print(centers.values)
 
 
-
-shifted_pts = mean_shift(temp_data, cols)
-final_df = pd.DataFrame(data=shifted_pts)
-# print(final_df.drop_duplicates())
-
-print("FINAL DATA:")
-for i,row in final_df.iterrows():
-	print(row.values)
-
+# print("FINAL DATA:")
+# for i,row in shifted_df.iterrows():
+# 	print(row.values)
 
 
 

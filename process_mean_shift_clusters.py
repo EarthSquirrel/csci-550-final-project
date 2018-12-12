@@ -38,11 +38,11 @@ def assign_clusters(clustered_df):
 	center_pts = clustered_data.iloc[indices]
 	print(center_pts)
 	for i,x in clustered_df.iterrows():
-		print("x = ", x.values[1:])
+		# print("x = ", x.values[1:])
 		ci = 0
 		for j,y in center_pts.iterrows():
 			if np.array(x.values[1:] == y.values[1:]).all():
-				print("Point ", i, "is in cluster ", ci)
+				# print("Point ", i, "is in cluster ", ci)
 				clusters[ci].append(i)
 				break
 			ci += 1
@@ -68,10 +68,10 @@ def assign_clusters(clustered_df):
 
 
 def write_cluster_file(clusters, bandwidth):
-	file = open("./mean-shifted-data/clusters_bw_"+str(bandwidth)+".csv", w)
+	file = open("./mean-shifted-data/clusters_bw_"+str(bandwidth)+".csv", 'w')
 	for c in clusters:
 		for i in c:
-			file.write(str(c)+",")
+			file.write(str(i)+",")
 		file.write("\n")
 
 
@@ -81,9 +81,10 @@ def write_cluster_file(clusters, bandwidth):
 
 
 orig_data = pd.read_csv('./monthly_avg_zscore.csv')
-clustered_data = pd.read_csv('./mean-shifted-data/mean_shifted_data_bw_0.6_conv.csv')
+clustered_data = pd.read_csv('./mean-shifted-data/mean_shifted_data_bw_1.5_conv.csv')
 clusters = assign_clusters(clustered_data)
-write_cluster_file(clusters,0.6)
+write_cluster_file(clusters, 1.5)
+make_cluster_meta_file(clustered_data, 1.5)
 
 
 # X = clustered_data.copy()
