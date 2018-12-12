@@ -30,7 +30,7 @@ def calc_dist(x1, x2):
     return dist
 
 
-def build(data, k, distm=0):
+def build(data, k, distm):
     print('\nRunning build method.....')
 
     # initialize variables
@@ -38,27 +38,44 @@ def build(data, k, distm=0):
     M = [(math.inf, math.inf) for kk in range(k)]  # set of medoids
     M_index = [math.inf for kk in range(k)]  # hold indicies for values
 
+
     # find first medoid
     print('\t Initial medoid.....')
     for i, xi in enumerate(data):
         if i % 1000 == 0:
             print('\t\tbuild point: {}'.format(i))
-        tdj = 0
+        tdi = 0
         # itterate through all data points that are not equal to xi
         for o in [ii for ii in range(len(data)) if ii != i]:
-            tdj = tdj + distm[i][o]
-            if tdj < TD:
-                TD, M[0] = tdj, xi
-                M_index[0] = i
+            tdi = tdi + distm[i][o]
+        if tdi < TD:
+            TD, M[0] = tdi, xi
+            M_index[0] = i
+    print('initital TD ', TD)
+    with open('runs/FINAL-INITIAL-MEDS.txt', 'a') as f:
+        out = str(M_index[0]) + '\n'
+        f.write(out)
+
+    # start at later medoid, k = 14
+    # M_index = [2304, 6435, 993, 5790, 2379, 11328, 181, 4461, 376, 2090,
+    #            10137, 8858, 1826, 2953]
+    # M = [data[i] for i in M_index]
+    # for mm in range(1, k):
+    #    M_index.append((math.inf, math.inf))
+    #    M.append(math.inf)
+    # print('len Ms: {} {}'.format(len(M_index), len(M)))
+    # TD = -21960.494001124956
 
     for i in range(1, k):
-        print('\tMedoid {}.....'.format(i))
+        print('\tMedoid: ', i, '.....')
         cTD = math.inf  # change in TD
+        # go through each point not in m
         for j in [jj for jj in range(len(data)) if jj not in M_index]:
             if j % 1000 == 0:
                 print('\t\tPoint: {} of {}'.format(j, len(data)))
             xj = data[j]
             ctd = 0  # test td
+            # compare to all other points
             for o in [oo for oo in range(len(data)) if oo not in M_index or
                       M != j]:
                 min_mo = min([distm[o][mm] for mm in M_index[0:i]])
@@ -68,6 +85,14 @@ def build(data, k, distm=0):
             if ctd < cTD:
                 cTD, M[i], M_index[i] = ctd, xj, j
         TD = cTD + TD
+
+        # print to file so can stop and not lose as much
+        time_too_long = str(dt.now() -start_time)
+        with open('runs/FINAL-INITIAL-MEDS.txt', 'a') as f:
+            out = str(i) + ' ' + time_too_long
+            out += '\n' + str(TD) + '\n' + str(M_index[0:i+1]) + '\n\n'
+            # print(out)
+            f.write(out)
 
     print('\tRuntime for build: {}'.format(dt.now()-start_time))
 
@@ -149,20 +174,21 @@ def swap(data, TD, Med, Dist, distm):
             if cTD >= 0:
                 # print('\t\t\t', j, ' breaking')
                 # print('\t\tcTD is greater then 0, breaking the loop')
-                # break
-                continue
+                break
+                # continue
             # else:
                 # print('{} is not > 0'.format(j))
         # swap roles of m_temp and x_temp:w
         M[m_temp] = data[x_temp]
         M_index[m_temp] = x_temp
         dist, dist_index = build_dist_table(data, M, M_index, distm)
-        print('\t\tFinished swap itteration, total runtime {}'.format(
-              dt.now()-start_time))
         TD = TD + cTD
         # add index set to list
         old_index_M.append(M_index.copy())
-        inter_med.append(M_index)  # track medoid chain
+        inter_med.append(M_index.copy())  # track medoid chain
+
+    print('\tFinished swap itteration, total runtime {}'.format(
+          dt.now()-start_time))
 
     return TD, (M, M_index), (dist, dist_index), inter_med
 
@@ -232,12 +258,13 @@ def output_clusters(clusters, file_name='none'):
     return print_clusters
 
 
-def track(data, k, csv_name='undeclared'):
+def track(data, k, csv_name='undeclared', notes=''):
     # create initial file
     output_name = 'runs/kmedoid-' + str(start_time)
     with open(output_name, 'a') as f:
         out = 'Testing kmedoids.py on ' + csv_name + ' where k =  ' + str(k)
         out += ' with' + str(len(data)) + ' instances\n'
+        out += notes + '\n'
         f.write(out)
 
     # calculate distance matrix
@@ -271,7 +298,48 @@ def track(data, k, csv_name='undeclared'):
     with open(output_name, 'a') as f:
         f.write(out)
 
+    # write special k to nc comparison file
+    with open('runs/k-nc-comparison.txt', 'a') as f:
+        out = str(k) + ',' + str(cut) + '\n'
+        f.write(out)
+
     return Med[1], clus
+
+
+def calc_td(data, M_index, dist_i, distm):
+    TD = 0
+    cluster = cluster_from_dist(dist_i, len(M_index))
+    for k in range(len(M_index)):
+        for c in cluster[k]:
+            TD += distm[c][k]
+    return TD
+
+
+def track_swap(data, med_list, file_name):
+    M_full = [data[m] for m in med_list]  # data points
+    start_TD = []
+    final_TD = []
+    for i in range(2, len(med_list)):
+        M = M_full[0:i]
+        M_index = med_list[0:i]
+        Dist = build_dist_table(data, M, M_index, distm)
+        TD = calc_td(data, M_index, Dist[1], distm)
+        print('', i, ' td: ', TD)
+        start_TD.append(TD)
+        Med = (M, M_index)
+        TDf, Med, Dist, tm = swap(data, TD, Med, Dist, distm)
+        final_TD.append(TDf)
+        print_clusters = output_clusters(cluster_from_dist(Dist[1], i))
+        with open('full-test.txt', 'a') as f:
+            out = '***'.join(['***' for ccc in range(15)]) + '\n'
+            out += 'Start TD: ' + str(TD) + ' end TD: ' + str(TDf) + '\n'
+            out += print_clusters + '\n'
+            f.write(out)
+        with open('full-clusters.txt', 'a') as f:
+            out = print_clusters + '\n\n'
+            f.write(out)
+    with open('full-test.txt', 'a') as f:
+        f.write(str(final_TD))
 
 
 if __name__ == '__main__':
@@ -288,7 +356,6 @@ if __name__ == '__main__':
     """
 
     k = 2
-    file_name = 'full-monthly-avgs.csv'
     file_name = 'monthly_avg_zscore.csv'
     data = pd.read_csv(file_name).iloc[0:, 3:8]
     print('headers: {}'.format(data.columns.values))
@@ -299,6 +366,25 @@ if __name__ == '__main__':
     # use faster method to calculate distance matrix....
     distm = euclid(data)
 
-    data = data[0:2000]
+    # for k in range(2, 25):
+    k = 1000
+    TD, Med = build(data, k, distm)
+    """
+    med_list = [2304, 6435, 993, 5790, 2379, 11328, 181, 4461, 376, 2090,
+                10137, 8858, 1826, 2953, 1831, 10090, 825, 1483, 4739, 5989,
+                10136, 5313, 5112, 11293, 11229]
+    print('total length med_list ', len(med_list))
+    track_swap(data, med_list, 'runs/td-output.txt')
+    """
+    # data = data[0:12]
 
-    track(data, k, file_name)
+    # notes = '\t not beaking and continue.... \n'
+    # notes = '\t breaking in the inner swap loop \n'
+    # notes = '\tString of multiple runs to look at effect of k\n'
+    # track(data, 25, file_name, notes)
+
+    """
+    for k in range(2, 20):
+        start_time = dt.now()
+        track(data, k, file_name, notes)
+    """
