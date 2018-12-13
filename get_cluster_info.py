@@ -2,6 +2,9 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import colors
+import normalized_cut as nc
+from sklearn.metrics.pairwise import euclidean_distances as euclid
+
 
 
 # make global variables
@@ -190,16 +193,24 @@ if __name__ == '__main__':
     # read in data as df
     data = pd.read_csv('monthly_avg_zscore.csv')
     print(data.columns.values)
+    data = data.iloc[0:, 3:8].values
+    distm = euclid(data)
+    # make distm
 
+    # all_clusters = read_clusters('mean-shifted-data/clusters_bw_1.csv')
     all_clusters = read_clusters('means-cluster-15.txt')
+    """i
     print('len of all clusters: ', len(all_clusters))
     for i, a in enumerate(all_clusters):
         print('num of clusters: ', len(a))
         print('\tindex of ', i)
         for aa in a:
             print('\t\tnumber of values in clusters: ', len(aa))
-
+    """
     test = all_clusters[0]
+    print('normalized cuts: ')
+    nc.calculate(test, distm)
+
     for t in test:
         print('len t in test: ', len(t))
     # print('test: ', test)
@@ -215,11 +226,12 @@ if __name__ == '__main__':
         # this must be done by each cluster
         city_month = sort_by_city(c)
         out = '*'.join(['*****' for x in range(10)]) + '\n'
-        out += 'Cluster {} of length {} \n'.format(i, len(c))
+        out += 'Cluster {} of length {} for {} cities \n'.format(i, len(c),
+                                                                 len(city_month))
 
         # get readablel ist
         out += readable_string(city_month) + '\n\n'
-        with open('figures-info.txt', 'a') as f:
+        with open('mean-15-figures-info.txt', 'a') as f:
             f.write(out)
 
         plot_color_city(city_month)
