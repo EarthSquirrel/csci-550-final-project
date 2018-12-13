@@ -7,11 +7,14 @@ def calculate(clust, distm):
     NC = 0
 
     # itterate through k times
-    for c in clust:
+    # c is a cluster
+    for i, c in enumerate(clust):
         # calculate win
         win = 0
-        for cc in c:
-            for cc2 in range(cc, len(c)):
+        for cci, cc in enumerate(c):
+            # cc is index of value in cluster
+            # print('cc {} c {}'.format(type(cc), type(c)))
+            for cc2 in range(cci, len(c)):
                 win += distm[cc][cc2]
         win = win/2
 
@@ -25,6 +28,7 @@ def calculate(clust, distm):
 
         # add to sum for this itteration of k
         NC += 1/(win/wout + 1)
+        # print('{}:: win: {} wout: {}'.format(i, win, wout))
 
     print('NC = ', NC)
     return NC
@@ -59,5 +63,18 @@ def simple_test():
     calculate(c, distm)
 
 
+def find_column_variance():
+    data = pd.read_csv('full-monthly-avgs.csv').iloc[0:, 3:8]
+    print(data.columns.values)
+    data = data.values
+    # data = pd.read_csv('monthly_avg_zscore.csv').iloc[0:, 3:8].values
+    print('len data: ', len(data))
+    t = np.transpose(data)
+    print('transposed len: ', len(t))
+    for r in t:
+        print('std: ', np.std(r))
+
+
 if __name__ == '__main__':
-    simple_test()
+    # simple_test()
+    find_column_variance()
